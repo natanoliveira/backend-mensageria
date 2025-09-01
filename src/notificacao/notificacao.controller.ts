@@ -7,6 +7,7 @@ import {
   Param,
   BadRequestException,
   HttpCode,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { NotificacaoService } from './notificacao.service';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -32,10 +33,15 @@ export class NotificacaoController {
       throw new BadRequestException('Mensagem não pode ser vazia');
     }
 
-    const { mensagemId } = await this.notificacaoService.criarNotificacao(
-      body.conteudoMensagem,
-    );
-    return { status: 'Aceito para processamento', mensagemId };
+    try {
+      const { mensagemId } = await this.notificacaoService.criarNotificacao(
+        body.conteudoMensagem,
+      );
+      return { mensagemId, status: 'Aceito para processamento' };
+    } catch (error) {
+      console.error('Erro ao criar notificação:', error.message);
+      throw new InternalServerErrorException('Falha ao processar requisição');
+    }
   }
 
   @ApiResponse({

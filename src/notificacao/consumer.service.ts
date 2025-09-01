@@ -14,28 +14,26 @@ export class ConsumerService implements OnModuleInit {
         await this.rabbit.consume(
             this.notificacaoService.getEntradaQueue(),
             async (msg) => {
-                const content = JSON.parse(msg.content.toString());
-                console.log('Recebido:', content);
+                try {
+                    const content = JSON.parse(msg.content.toString());
+                    console.log('Recebido:', content);
 
-                // Simula processamento assíncrono
-                await new Promise((r) =>
-                    setTimeout(r, 1000 + Math.random() * 1000),
-                );
+                    await new Promise((r) => setTimeout(r, 1000 + Math.random() * 1000));
 
-                // Sucesso ou falha aleatória
-                const sucesso = Math.floor(Math.random() * 10) > 2;
-                const status = sucesso
-                    ? 'PROCESSADO_SUCESSO'
-                    : 'FALHA_PROCESSAMENTO';
+                    const sucesso = Math.floor(Math.random() * 10) > 2;
+                    const status = sucesso ? 'PROCESSADO_SUCESSO' : 'FALHA_PROCESSAMENTO';
 
-                // Atualiza status e publica
-                this.notificacaoService.atualizarStatus(content.mensagemId, status);
-                await this.rabbit.sendToQueue(
-                    this.notificacaoService.getStatusQueue(),
-                    { mensagemId: content.mensagemId, status },
-                );
+                    this.notificacaoService.atualizarStatus(content.mensagemId, status);
+                    await this.rabbit.sendToQueue(
+                        this.notificacaoService.getStatusQueue(),
+                        { mensagemId: content.mensagemId, status },
+                    );
 
-                this.rabbit.ack(msg);
+                    this.rabbit.ack(msg);
+                } catch (error) {
+                    console.error('Erro ao processar mensagem do RabbitMQ:', error.message);
+                    if (msg) this.rabbit.ack(msg);
+                }
             },
         );
     }

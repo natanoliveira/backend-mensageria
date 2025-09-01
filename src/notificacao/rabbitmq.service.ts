@@ -12,7 +12,7 @@ export class RabbitMQService {
 
     private async ensureConnection() {
         if (!this.channel) {
-            const url = this.configService.get<string>('RABBITMQ_URL');
+            const url = this.configService.get<string>('URL_RABBITMQ');
             this.connection = await amqp.connect(url);
             this.channel = await this.connection.createChannel();
         }
@@ -24,15 +24,24 @@ export class RabbitMQService {
     }
 
     async sendToQueue(queue: string, message: any) {
-        await this.ensureConnection();
-        await this.channel.assertQueue(queue);
-        this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+        try {
+            await this.ensureConnection();
+            await this.channel.assertQueue(queue);
+            this.channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+        } catch (error) {
+            console.error(`Erro ao enviar mensagem para a fila ${queue}:`, error.message);
+            throw error;
+        }
     }
 
     async consume(queue: string, callback: (msg: amqp.ConsumeMessage) => void) {
-        await this.ensureConnection();
-        await this.channel.assertQueue(queue);
-        this.channel.consume(queue, callback, { noAck: false });
+        try {
+            await this.ensureConnection();
+            await this.channel.assertQueue(queue);
+            this.channel.consume(queue, callback, { noAck: false });
+        } catch (error) {
+            console.error(`Erro ao consumir fila ${queue}:`, error.message);
+        }
     }
 
     ack(msg: amqp.ConsumeMessage) {

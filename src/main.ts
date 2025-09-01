@@ -5,10 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from '@nestjs/common';
 import moment from 'moment-timezone';
 import morgan from 'morgan';
+import { RabbitMQService } from './notificacao/rabbitmq.service';
 
 async function bootstrap() {
   const env = process.env.NODE_ENV;
-  console.log(env);
   const defaultPort = 3000;
   const port = process.env.PORT || defaultPort;
   const timezone = process.env.TIMEZONE || 'America/Sao_Paulo';
@@ -64,9 +64,17 @@ async function bootstrap() {
     SwaggerModule.setup('documentation', app, document);
   }
 
-  // await app.listen(port);
+  const logger = new Logger();
+
+  const rabbit = app.get(RabbitMQService);
+  try {
+    await rabbit.assertQueue('teste-conexao');
+    logger.log('Conectado ao RabbitMQ com sucesso!');
+  } catch (error) {
+    logger.error('Falha ao conectar no RabbitMQ:', error.message);
+  }
+
   await app.listen(port, () => {
-    const logger = new Logger();
     logger.log(`\n+-------------------------------------------------------------------------------------+
   🚀  Servidor rodando com sucesso!
   📡  API disponível em: http://localhost:${port}
